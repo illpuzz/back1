@@ -1,0 +1,75 @@
+jwt:
+  token:
+    expire: 10
+
+spring:
+  application:
+    name: back
+  output:
+    ansi:
+      enabled: always
+  # 資料庫連線資訊
+  datasource:
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    url: jdbc:sqlserver://35.221.153.166:1433;DatabaseName=camp;trustServerCertificate=true;
+    username: sqlserver
+    password: shanatova
+    hikari:
+      connection-timeout: 60000
+      maximum-pool-size: 10
+  # 多國語系設定
+  messages:
+    basename: i18n.Messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  # JPA設定
+  jpa:
+    show-sql: true
+    database-platform: org.hibernate.dialect.SQLServerDialect
+    properties:
+      hibernate:
+        format_sql: true
+        connection:
+          autocommit: false
+        # 添加自動類型轉換設定，允許 Long 與 Integer 相互轉換
+        id:
+          new_generator_mappings: false
+        globally_quoted_identifiers: true
+      transaction:
+        jta:
+          platform: org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform
+    hibernate:
+      ddl-auto: update # 暫時改為 update 以允許 Hibernate 調整資料表結構
+  # Jackson 日期格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Taipei
+  # 檔案上傳設定
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  # 解決循環依賴問題
+  main:
+    allow-circular-references: true
+    allow-bean-definition-overriding: true
+  # Transaction 設定
+  transaction:
+    default-timeout: 30
+  profiles:
+    active: '@xxx@'
+
+# 伺服器設定
+server:
+  port: 8080
+
+# 日誌設定
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
