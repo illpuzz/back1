@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.back.model.ReviewImage;
+import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -73,6 +75,10 @@ public class ReviewService {
         
         review.setReviewHasActiveReport(hasActiveReviewReport);
         review.setReplyHasActiveReport(hasActiveReplyReport);
+        
+        
+        
+        
 
         return review;
     }
@@ -298,6 +304,13 @@ public class ReviewService {
                 
                 review.setReviewHasActiveReport(hasActiveReviewReport);
                 review.setReplyHasActiveReport(hasActiveReplyReport);
+                
+             // 獲取並設置圖片URL
+                List<ReviewImage> images = reviewImageService.getImagesByReviewId(review.getId());
+                List<String> imageUrls = images.stream()
+                                               .map(ReviewImage::getImageUrl)
+                                               .collect(Collectors.toList());
+                review.setImageUrls(imageUrls);
             }
         }
         
