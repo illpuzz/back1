@@ -58,13 +58,22 @@ public class ReviewController {
     }
     
     
-    // 切换回覆可見性
+ // 切換回覆可見性
     @PutMapping("/{id}/reply-visibility")
     public ResponseEntity<Review> toggleReplyVisibility(
             @PathVariable("id") Integer id,
             @RequestBody Map<String, Boolean> payload) {
         Boolean isVisible = payload.get("isVisible");
-        Review updatedReview = reviewService.toggleReplyVisibility(id, isVisible);
+        
+        Review updatedReview;
+        if (isVisible) {
+            // 如果設置為可見，使用 restoreReplyVisibility
+            updatedReview = reviewService.restoreReplyVisibility(id);
+        } else {
+            // 如果設置為不可見，使用 setReplyVisibility
+            updatedReview = reviewService.setReplyVisibility(id, false);
+        }
+        
         return new ResponseEntity<>(updatedReview, HttpStatus.OK);
     }
 
