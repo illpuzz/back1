@@ -24,6 +24,12 @@ public class ReviewService {
 
     @Autowired
     private ReviewLikeRepository reviewLikeRepository;
+    
+    @Autowired
+    private ReviewImageService reviewImageService;
+    
+    @Autowired
+    private ReviewReportService reviewReportService;
 
     /**
      * 創建評價
@@ -32,6 +38,7 @@ public class ReviewService {
         review.setCreatedAt(LocalDateTime.now());
         review.setUpdatedAt(LocalDateTime.now());
         review.setReviewIsVisible(true); // 确保新评价是可见的
+        review.setReplyIsVisible(true); // 初始化回覆可見性
         return reviewRepository.save(review);
     }
 
@@ -71,8 +78,9 @@ public class ReviewService {
     }
 
     /**
-     * 刪除評價
+     * 刪除評價（物理刪除）及其所有相關資料
      */
+    @Transactional
     public void deleteReview(Integer id, Integer userId) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ReviewNotFoundException("找不到評價 ID: " + id));
@@ -82,13 +90,17 @@ public class ReviewService {
             throw new RuntimeException("無權刪除此評價");
         }
 
-        // 刪除該評價的所有點讚記錄
+        // 1. 刪除該評價的所有圖片
+        reviewImageService.deleteByReviewId(id);
+        
+        // 2. 刪除該評價的所有點讚
         reviewLikeRepository.deleteByReviewId(id);
+        
+        // 3. 刪除該評價的所有舉報
+        reviewReportService.deleteReportsByReviewId(id);
 
-        // 標記評價為不可見（邏輯刪除）
-        review.setReviewIsVisible(false);
-        review.setUpdatedAt(LocalDateTime.now());
-        reviewRepository.save(review);
+        // 4. 物理刪除評價
+        reviewRepository.deleteById(id);
     }
 
     /**
@@ -99,11 +111,28 @@ public class ReviewService {
                 .orElseThrow(() -> new ReviewNotFoundException("找不到評價 ID: " + id));
 
         review.setReplyText(replyText);
+        review.setReplyIsVisible(true); // 設置回覆為可見
         review.setUpdatedAt(LocalDateTime.now());
 
         return reviewRepository.save(review);
     }
 
+    /**
+     * 控制回覆可見性
+     */
+    public Review toggleReplyVisibility(Integer id, Boolean isVisible) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new ReviewNotFoundException("找不到評價 ID: " + id));
+        
+        review.setReplyIsVisible(isVisible);
+        review.setUpdatedAt(LocalDateTime.now());
+        
+        return reviewRepository.save(review);
+    }
+    
+    
+    
+    
     /**
      * 刪除評價回覆
      * 

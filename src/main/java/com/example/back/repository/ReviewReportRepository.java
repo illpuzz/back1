@@ -3,6 +3,7 @@ package com.example.back.repository;
 import com.example.back.model.ReviewReport;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,4 +19,8 @@ public interface ReviewReportRepository extends JpaRepository<ReviewReport, Inte
     
     // 根據狀態查詢舉報
     List<ReviewReport> findByStatus(String status);
+    
+    // 新增：根據評價ID刪除所有舉報
+    @Transactional
+    void deleteByReviewId(Integer reviewId);
 }

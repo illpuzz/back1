@@ -4,6 +4,7 @@ import com.example.back.model.ReviewReport;
 import com.example.back.repository.ReviewReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.example.back.model.Review;
 import com.example.back.repository.ReviewRepository;
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ public class ReviewReportService {
 
     // 創建舉報
     public ReviewReport createReport(ReviewReport report) {
-    	Integer reviewId = report.getReviewId();
+        Integer reviewId = report.getReviewId();
         Review review = reviewRepository.findById(reviewId)
             .orElseThrow(() -> new RuntimeException("找不到評價 ID: " + reviewId));
 
@@ -31,7 +32,7 @@ public class ReviewReportService {
         return reportRepository.save(report);
     }
 
-    // 根據ID獲取舉報 (添加這個方法)
+    // 根據ID獲取舉報
     public ReviewReport getReport(Integer reportId) {
         return reportRepository.findById(reportId)
             .orElseThrow(() -> new RuntimeException("舉報不存在: " + reportId));
@@ -62,9 +63,19 @@ public class ReviewReportService {
         ReviewReport report = getReport(reportId);
         report.setStatus(status);
         
-
         // 如果您的實體類有 handlerNote 欄位，可以設置處理備註
         // report.setHandlerNote(handlerNote);
         return reportRepository.save(report);
+    }
+    
+    // 刪除評價相關的所有舉報
+    @Transactional
+    public void deleteReportsByReviewId(Integer reviewId) {
+        List<ReviewReport> reports = reportRepository.findByReviewId(reviewId);
+        for (ReviewReport report : reports) {
+            reportRepository.delete(report);
+        }
+        // 或者直接使用批量刪除方法（如果存在）
+        // reportRepository.deleteByReviewId(reviewId);
     }
 }

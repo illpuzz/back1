@@ -45,6 +45,9 @@ public class Review {
     @Column(name = "reply_text", columnDefinition = "TEXT")
     private String replyText;
     
+    @Column(name = "reply_is_visible")
+    private Boolean replyIsVisible = true;
+    
     @Column(name = "like_count")
     private Long likeCount = 0L;
     
@@ -159,6 +162,14 @@ public class Review {
     
     public void setReplyText(String replyText) {
         this.replyText = replyText;
+    }
+    
+    public Boolean getReplyIsVisible() {
+        return replyIsVisible;
+    }
+
+    public void setReplyIsVisible(Boolean replyIsVisible) {
+        this.replyIsVisible = replyIsVisible;
     }
     
     public Long getLikeCount() {

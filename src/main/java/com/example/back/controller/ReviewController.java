@@ -56,6 +56,17 @@ public class ReviewController {
         response.put("deleted", Boolean.TRUE);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    
+    
+    // 切换回覆可見性
+    @PutMapping("/{id}/reply-visibility")
+    public ResponseEntity<Review> toggleReplyVisibility(
+            @PathVariable("id") Integer id,
+            @RequestBody Map<String, Boolean> payload) {
+        Boolean isVisible = payload.get("isVisible");
+        Review updatedReview = reviewService.toggleReplyVisibility(id, isVisible);
+        return new ResponseEntity<>(updatedReview, HttpStatus.OK);
+    }
 
     // 管理員回覆評價
     @PutMapping("/{id}/reply")
