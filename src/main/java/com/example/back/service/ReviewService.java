@@ -3,8 +3,10 @@ package com.example.back.service;
 import com.example.back.exception.ReviewNotFoundException;
 import com.example.back.model.Review;
 import com.example.back.model.ReviewLike;
+import com.example.back.model.ReviewReport;
 import com.example.back.repository.ReviewLikeRepository;
 import com.example.back.repository.ReviewRepository;
+import com.example.back.repository.ReviewReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,12 +16,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
 public class ReviewService {
 
-    @Autowired
+	@Autowired
     private ReviewRepository reviewRepository;
 
     @Autowired
@@ -30,6 +33,9 @@ public class ReviewService {
     
     @Autowired
     private ReviewReportService reviewReportService;
+    
+    @Autowired
+    private ReviewReportRepository reviewReportRepository;
 
     /**
      * 創建評價
@@ -43,7 +49,7 @@ public class ReviewService {
     }
 
     /**
-     * 獲取評價 (包括用戶點讚狀態)
+     * 獲取評價 (包括用戶點讚狀態和舉報狀態)
      */
     public Review getReview(Integer id, Integer userId) {
         Review review = reviewRepository.findById(id)
@@ -54,6 +60,19 @@ public class ReviewService {
             Optional<ReviewLike> like = reviewLikeRepository.findByUserIdAndReviewId(userId, id);
             review.setUserLikeStatus(like.isPresent() ? 1 : 0);
         }
+        
+        // 檢查是否有待處理的舉報
+        List<ReviewReport> reviewReports = reviewReportRepository.findByReviewIdAndReportTarget(id, "review");
+        List<ReviewReport> replyReports = reviewReportRepository.findByReviewIdAndReportTarget(id, "reply");
+        
+        boolean hasActiveReviewReport = reviewReports.stream()
+                .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+        
+        boolean hasActiveReplyReport = replyReports.stream()
+                .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+        
+        review.setReviewHasActiveReport(hasActiveReviewReport);
+        review.setReplyHasActiveReport(hasActiveReplyReport);
 
         return review;
     }
@@ -112,15 +131,45 @@ public class ReviewService {
 
         review.setReplyText(replyText);
         review.setReplyIsVisible(true); // 設置回覆為可見
+        
+        // 檢查是否有待處理的回覆舉報，有的話保持不可見
+        List<ReviewReport> replyReports = reviewReportRepository.findByReviewIdAndReportTarget(id, "reply");
+        boolean hasActiveReplyReport = replyReports.stream()
+                .anyMatch(report -> "pending".equals(report.getStatus()));
+        
+        if (hasActiveReplyReport) {
+            review.setReplyIsVisible(false);
+        }
+        
         review.setUpdatedAt(LocalDateTime.now());
-
         return reviewRepository.save(review);
     }
 
     /**
-     * 控制回覆可見性
+     * 控制評價可見性（用於處理舉報後的是否顯示)
      */
-    public Review toggleReplyVisibility(Integer id, Boolean isVisible) {
+    public Review setReviewVisibility(Integer id, Boolean isVisible) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new ReviewNotFoundException("找不到評價 ID: " + id));
+        
+        review.setReviewIsVisible(isVisible);
+        review.setUpdatedAt(LocalDateTime.now());
+        
+        return reviewRepository.save(review);
+    }
+    
+    /**
+     * 恢復評價可見性（用於管理員駁回舉報後）
+     */
+    public Review restoreReviewVisibility(Integer id) {
+        return setReviewVisibility(id, true);
+    }
+    
+    
+    /**
+     * 設置回覆可見性（用於處理對回覆舉報後的是否顯示）
+     */
+    public Review setReplyVisibility(Integer id, Boolean isVisible) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ReviewNotFoundException("找不到評價 ID: " + id));
         
@@ -129,7 +178,13 @@ public class ReviewService {
         
         return reviewRepository.save(review);
     }
-    
+
+    /**
+     * 恢復回覆可見性（用於管理員駁回對回覆的舉報後）
+     */
+    public Review restoreReplyVisibility(Integer id) {
+        return setReplyVisibility(id, true);
+    }
     
     
     
@@ -222,11 +277,27 @@ public class ReviewService {
             reviews = reviewRepository.findAll(pageable);
         }
         
-        // 如果提供了userId，則附加點讚狀態
-        if (userId != null && reviews.hasContent()) {
+        // 處理每筆評價的附加資訊
+        if (reviews.hasContent()) {
             for (Review review : reviews.getContent()) {
-                Optional<ReviewLike> like = reviewLikeRepository.findByUserIdAndReviewId(userId, review.getId());
-                review.setUserLikeStatus(like.isPresent() ? 1 : 0);
+                // 如果提供了userId，附加點讚狀態
+                if (userId != null) {
+                    Optional<ReviewLike> like = reviewLikeRepository.findByUserIdAndReviewId(userId, review.getId());
+                    review.setUserLikeStatus(like.isPresent() ? 1 : 0);
+                }
+                
+                // 附加舉報狀態
+                List<ReviewReport> reviewReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "review");
+                List<ReviewReport> replyReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "reply");
+                
+                boolean hasActiveReviewReport = reviewReports.stream()
+                        .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+                
+                boolean hasActiveReplyReport = replyReports.stream()
+                        .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+                
+                review.setReviewHasActiveReport(hasActiveReviewReport);
+                review.setReplyHasActiveReport(hasActiveReplyReport);
             }
         }
         

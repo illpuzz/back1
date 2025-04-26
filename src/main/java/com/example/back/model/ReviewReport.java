@@ -34,10 +34,24 @@ public class ReviewReport {
     @Column(name = "status")
     private String status;
     
+    // 舉報目標: "review" 表示舉報評論, "reply" 表示舉報回覆
+    @Column(name = "report_target")
+    private String reportTarget;
+    
+    // 處理者備註
+    @Column(name = "handler_note")
+    private String handlerNote;
+    
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.status = "pending"; // 默認狀態為待處理
+        
+        // 如果未設置舉報目標，預設為舉報評論
+        if (this.reportTarget == null) {
+            this.reportTarget = "review";
+        }
     }
     
     @PreUpdate
@@ -116,5 +130,21 @@ public class ReviewReport {
     
     public void setStatus(String status) {
         this.status = status;
+    }
+    
+    public String getReportTarget() {
+        return reportTarget;
+    }
+    
+    public void setReportTarget(String reportTarget) {
+        this.reportTarget = reportTarget;
+    }
+    
+    public String getHandlerNote() {
+        return handlerNote;
+    }
+    
+    public void setHandlerNote(String handlerNote) {
+        this.handlerNote = handlerNote;
     }
 }

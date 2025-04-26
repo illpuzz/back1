@@ -45,14 +45,24 @@ public class Review {
     @Column(name = "reply_text", columnDefinition = "TEXT")
     private String replyText;
     
+    //不一定有reply所以可以null
     @Column(name = "reply_is_visible")
     private Boolean replyIsVisible = true;
+    
+    @Column(name = "review_is_visible", nullable = false)
+    private Boolean reviewIsVisible = true;
+    
+    //評論/回覆的舉報狀態
+    @Transient
+    private Boolean reviewHasActiveReport = false;
+    
+    @Transient
+    private Boolean replyHasActiveReport = false;
     
     @Column(name = "like_count")
     private Long likeCount = 0L;
     
-    @Column(name = "review_is_visible", nullable = false)
-    private Boolean reviewIsVisible = true;
+    
     
     @Transient
     private Integer userLikeStatus = 0;
@@ -219,4 +229,21 @@ public class Review {
     public void setImageUrls(List<String> imageUrls) {
         this.imageUrls = imageUrls;
     }
+    
+    public Boolean getReviewHasActiveReport() {
+        return reviewHasActiveReport;
+    }
+    
+    public void setReviewHasActiveReport(Boolean reviewHasActiveReport) {
+        this.reviewHasActiveReport = reviewHasActiveReport;
+    }
+    
+    public Boolean getReplyHasActiveReport() {
+        return replyHasActiveReport;
+    }
+    
+    public void setReplyHasActiveReport(Boolean replyHasActiveReport) {
+        this.replyHasActiveReport = replyHasActiveReport;
+    }
+    
 }
