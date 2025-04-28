@@ -110,21 +110,19 @@ public class ReviewController {
 
     // 分頁查詢評價
     @GetMapping
-    public ResponseEntity<Page<Review>> getAllReviews(
+    public Page<Review> getAllReviews(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer campSiteId,
+            @RequestParam(required = false) Integer minRating,
+            @RequestParam(required = false) Integer userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer campSiteId,
-            @RequestParam(required = false) Integer minRating,
-            @RequestParam(required = false) Integer userId) {
-
-        Page<Review> reviews = reviewService.searchReviews(
-                keyword, campSiteId, minRating, userId, 
-                page, size, sortBy, direction);
+            @RequestParam(defaultValue = "false") Boolean includeReported) {
         
-        return new ResponseEntity<>(reviews, HttpStatus.OK);
+        // 調用修改後的 searchReviews 方法，傳遞 includeReported 參數
+        return reviewService.searchReviews(keyword, campSiteId, minRating, userId, page, size, sortBy, direction, includeReported);
     }
 
     // 獲取營地平均評分

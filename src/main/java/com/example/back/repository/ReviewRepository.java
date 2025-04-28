@@ -29,4 +29,15 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     // 統計指定營地的平均評分
     @Query("SELECT AVG(r.overallRating) FROM Review r WHERE r.campSiteId = :campSiteId AND r.reviewIsVisible = true")
     Double getAverageRatingByCampSiteId(@Param("campSiteId") Integer campSiteId);
+    
+ // 關鍵字搜索，包括被舉報的評價
+    @Query("SELECT r FROM Review r WHERE " +
+           "(r.reviewText LIKE %:keyword% OR r.pros LIKE %:keyword% OR r.cons LIKE %:keyword% OR r.replyText LIKE %:keyword%)")
+    Page<Review> findByKeywordIncludeReported(@Param("keyword") String keyword, Pageable pageable);
+
+    // 根據營地ID搜索，不限制可見性
+    Page<Review> findByCampSiteId(Integer campSiteId, Pageable pageable);
+
+    // 根據最低評分搜索，不限制可見性
+    Page<Review> findByOverallRatingGreaterThanEqual(Integer minRating, Pageable pageable);
 }

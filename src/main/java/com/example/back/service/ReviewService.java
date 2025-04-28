@@ -260,62 +260,80 @@ public class ReviewService {
      * 搜索評價
      */
     public Page<Review> searchReviews(String keyword, Integer campSiteId, Integer minRating, Integer userId, 
-                                      int page, int size, String sortBy, String direction) {
-        
-        // 創建分頁和排序
-        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        
-        Page<Review> reviews;
-        
-        // 根據不同參數使用不同的查詢方法
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // 關鍵字搜索
-            reviews = reviewRepository.findByKeyword(keyword.trim(), pageable);
-        } else if (campSiteId != null) {
-            // 營地ID搜索
-            reviews = reviewRepository.findByCampSiteIdAndReviewIsVisibleTrue(campSiteId, pageable);
-        } else if (minRating != null && minRating > 0) {
-            // 最低評分搜索
-            reviews = reviewRepository.findByOverallRatingGreaterThanEqualAndReviewIsVisibleTrue(minRating, pageable);
-        } else {
-            // 使用 JPA 內建方法
-            reviews = reviewRepository.findAll(pageable);
-        }
-        
-        // 處理每筆評價的附加資訊
-        if (reviews.hasContent()) {
-            for (Review review : reviews.getContent()) {
-                // 如果提供了userId，附加點讚狀態
-                if (userId != null) {
-                    Optional<ReviewLike> like = reviewLikeRepository.findByUserIdAndReviewId(userId, review.getId());
-                    review.setUserLikeStatus(like.isPresent() ? 1 : 0);
-                }
-                
-                // 附加舉報狀態
-                List<ReviewReport> reviewReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "review");
-                List<ReviewReport> replyReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "reply");
-                
-                boolean hasActiveReviewReport = reviewReports.stream()
-                        .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
-                
-                boolean hasActiveReplyReport = replyReports.stream()
-                        .anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
-                
-                review.setReviewHasActiveReport(hasActiveReviewReport);
-                review.setReplyHasActiveReport(hasActiveReplyReport);
-                
-             // 獲取並設置圖片URL
-                List<ReviewImage> images = reviewImageService.getImagesByReviewId(review.getId());
-                List<String> imageUrls = images.stream()
-                                               .map(ReviewImage::getImageUrl)
-                                               .collect(Collectors.toList());
-                review.setImageUrls(imageUrls);
-            }
-        }
-        
-        return reviews;
-    }
+            int page, int size, String sortBy, String direction, Boolean includeReported) {
+
+// 創建分頁和排序
+Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+Page<Review> reviews;
+
+// 根據不同參數使用不同的查詢方法
+if (keyword != null && !keyword.trim().isEmpty()) {
+// 關鍵字搜索
+if (includeReported != null && includeReported) {
+// 包含被舉報的評價
+reviews = reviewRepository.findByKeywordIncludeReported(keyword.trim(), pageable);
+} else {
+// 原來的行為：只顯示可見的評價
+reviews = reviewRepository.findByKeyword(keyword.trim(), pageable);
+}
+} else if (campSiteId != null) {
+// 營地ID搜索
+if (includeReported != null && includeReported) {
+// 包含被舉報的評價
+reviews = reviewRepository.findByCampSiteId(campSiteId, pageable);
+} else {
+// 原來的行為：只顯示可見的評價
+reviews = reviewRepository.findByCampSiteIdAndReviewIsVisibleTrue(campSiteId, pageable);
+}
+} else if (minRating != null && minRating > 0) {
+// 最低評分搜索
+if (includeReported != null && includeReported) {
+// 包含被舉報的評價
+reviews = reviewRepository.findByOverallRatingGreaterThanEqual(minRating, pageable);
+} else {
+// 原來的行為：只顯示可見的評價
+reviews = reviewRepository.findByOverallRatingGreaterThanEqualAndReviewIsVisibleTrue(minRating, pageable);
+}
+} else {
+// 使用 JPA 內建方法
+reviews = reviewRepository.findAll(pageable);
+}
+
+// 處理每筆評價的附加資訊
+if (reviews.hasContent()) {
+for (Review review : reviews.getContent()) {
+// 如果提供了userId，附加點讚狀態
+if (userId != null) {
+Optional<ReviewLike> like = reviewLikeRepository.findByUserIdAndReviewId(userId, review.getId());
+review.setUserLikeStatus(like.isPresent() ? 1 : 0);
+}
+
+// 附加舉報狀態
+List<ReviewReport> reviewReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "review");
+List<ReviewReport> replyReports = reviewReportRepository.findByReviewIdAndReportTarget(review.getId(), "reply");
+
+boolean hasActiveReviewReport = reviewReports.stream()
+.anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+
+boolean hasActiveReplyReport = replyReports.stream()
+.anyMatch(report -> "pending".equals(report.getStatus()) || "approved".equals(report.getStatus()));
+
+review.setReviewHasActiveReport(hasActiveReviewReport);
+review.setReplyHasActiveReport(hasActiveReplyReport);
+
+// 獲取並設置圖片URL
+List<ReviewImage> images = reviewImageService.getImagesByReviewId(review.getId());
+List<String> imageUrls = images.stream()
+                    .map(ReviewImage::getImageUrl)
+                    .collect(Collectors.toList());
+review.setImageUrls(imageUrls);
+}
+}
+
+return reviews;
+}
 
     /**
      * 獲取營地平均評分
